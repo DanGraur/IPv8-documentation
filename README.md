@@ -7,7 +7,7 @@ Notes and observations concerning the functionality of the REST calls in the **I
 
 Example behaviour of *passive* and *regular* updates in an **IPv8 Android Application** instance, regarding fellow peer lists and their associated attributes. It should be noted that the **Attestation Server** is nothing more than a *well-known peer* itself, accessed through an HTTP URL (`127.0.0.1:8086/attestation`):  
 
-![Alt Text](./attestation_req.png)
+![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/attestation_req.png?token=APkaVaoBoMUqsiCMZC0pjjqbFvWyC0buks5a_hRwwA%3D%3D)
 
 **Every second**, the application will do the following:
 
@@ -21,7 +21,7 @@ Example behaviour of *passive* and *regular* updates in an **IPv8 Android Applic
 
 Example RESTful based communication flow for serving **Attestation Requests**, as currently implemented in the demo application:
 
-![Alt Text](./output_SQjlvW.gif)
+![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/output_SQjlvW.gif?token=APkaVaGBLp8csIvmimAzRNnSotrflO0yks5a_hRWwA%3D%3D)
 
 0. The **Client**'s user interacts with their device in order to **obtain attestation** for a particular **attribute**.
 
@@ -45,7 +45,7 @@ It should be mentioned that the protocol, which abides to the REST paradigms, us
 
 The diagram below describes the **REST API** of an **IPv8** object (in this current implementation version). These are requests which can be handled by the **IPv8** objects:
 
-![Alt Text](./peer_rest_api.png)
+![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/peer_rest_api.png?token=APkaVRtCoYs2lGjAFNmtcXlhPI-2WnO4ks5a_hRKwA%3D%3D)
 
 Below, a detailed explanation of the REST Requests is presented:
 
@@ -91,7 +91,7 @@ Below, a detailed explanation of the REST Requests is presented:
 	
 The diagram below describes the **REST Requests** implemented in the **Android Application** (in this current implementation version). These requests are forwarded to, and handled by the **IPv8** object's **REST APIs**:
 
-![Alt Text](./android_rest_api.png)
+![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/android_rest_api.png?token=APkaVcJZ2jcGbQ_qLaBdXqLRW1omOze_ks5a_hO6wA%3D%3D)
 
 All requests must abide to the specifications detailed above (in this section). 
 
