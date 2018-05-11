@@ -7,7 +7,7 @@ Notes and observations concerning the functionality of the REST calls in the **I
 
 Example behaviour of *passive* and *regular* updates in an **IPv8 Android Application** instance, regarding fellow peer lists and their associated attributes. It should be noted that the **Attestation Server** is nothing more than a *well-known peer* itself, accessed through an HTTP URL (`127.0.0.1:8086/attestation`):  
 
-![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/attestation_req.png?token=APkaVaoBoMUqsiCMZC0pjjqbFvWyC0buks5a_hRwwA%3D%3D)
+![Alt Text](./attestation_req.png)
 
 **Every second**, the application will do the following:
 
@@ -21,7 +21,7 @@ Example behaviour of *passive* and *regular* updates in an **IPv8 Android Applic
 
 Example RESTful based communication flow for serving **Attestation Requests**, as currently implemented in the demo application:
 
-![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/output_SQjlvW.gif?token=APkaVaGBLp8csIvmimAzRNnSotrflO0yks5a_hRWwA%3D%3D)
+![Alt Text](./output_SQjlvW.gif)
 
 0. The **Client**'s user interacts with their device in order to **obtain attestation** for a particular **attribute**.
 
@@ -45,20 +45,73 @@ It should be mentioned that the protocol, which abides to the REST paradigms, us
 
 The diagram below describes the **REST API** of an **IPv8** object (in this current implementation version). These are requests which can be handled by the **IPv8** objects:
 
-![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/peer_rest_api.png?token=APkaVRtCoYs2lGjAFNmtcXlhPI-2WnO4ks5a_hRKwA%3D%3D)
+![Alt Text](./peer_rest_api.png)
 
 Below, a detailed explanation of the REST Requests is presented:
 
- 
+* **GET Methods** sent to the **AttestationEndpoint**:
 
+	* **`type = "outstanding"`**: Retrieve a list of tuples of the form `(<b64_encoded_requesting_peer_ID>, <attribte_name>)`, each representing an, as of yet, unresolved attestation request (from a peer identified by `<b64_encoded_requesting_peer_ID>` for the attribute `<attribte_name>`).
+	
+	* **`type = "verification_output"`**: Retrieve a dictionary (equivalently, a map) of the form: `<b64_attribute_name_hash> -> (<b64_attribute_value_hash>, <confidence_value>)`. The dictionary should contain a record of all the previous verification processes' results.
+	
+	* **`type = "peers"`**: Retrieve a list of Base64 encoded peer IDs, which uniquely identify the peers in the **first Identity Overlay**. 
+	
+	* **`type = "attributes"`**: Return a list of tuples of the form `(<transaction_name>, <b64_transaction_hash>)`, from the the latest 200 blocks associated with a **particular peer**. ** *Optional parameters* **:
+		
+		* `mid = <b64_peer_mid>`: Identifies the **particular peer** (using its unique ID) whose attributes are being requested. If this parameter is missing, the **peer** shall default to the target endpoint's peer.
+		
+* **POST Methods** sent to the **AttestationEndpoint**:
+
+	* **`type = "request"`**: Request the attestation of a particular attribute from a particular peer. ** *Required additional parameters* **:
+		
+		* `mid = <b64_peer_mid>`: Identifies the peer (by its unique ID) from which the attestation is requested.
+		
+		* `attribute_name = <attribute_name>`: The name of the attribute, for which attestation is requested.
+		
+	* **`type = "attest"`**: Attest a particular attribute, for a particular peer. Additionally, return an attested value for the aforementioned attribute. ** *Required additional parameters* **:
+		
+		* `mid = <b64_peer_mid>`: Identifies the peer (by its unique ID) from which the attestation is requested. 
+		
+		* `attribute_name = <attribute_name>`: The name of the attribute, for which attestation is requested.
+		
+		* `attribute_value = <b64_attribute_value>`: Base64 encoded attested value for the attribute.
+	
+	* **`type = "verify"`**: Request the verification of a particular set of values associated to a particular attribute, from another particular peer. ** *Required additional parameters* **:
+		
+		* `mid = <b64_peer_mid>`: Identifies the peer (by its unique ID) from which the attestation is requested.
+		
+		* `attribute_hash = <b64_attribute_hash>`: A Base64 encoded hash of the attribute.
+		
+		* `attribute_values = <b64_attribute_values_string>`: A variable length list of Base64 encoded attribute values, for which verification is required. `<b64_attribute_values_string>` is a comma separated string of values, that is: `<b64_attribute_values_string> = "<b64_attr_val_1>,<b64_attr_val_2>,...,<b64_attr_val_N>"`, where `N` may be arbitrarily large.    
+	
+* **GET Methods** sent to the **NetworkEndpoint**:
+	* **Any GET request**: Retrieve a dictionary (equivalently, a map) holding information on each verified peer in the network. The dictionary's structure will be the following: `<b64_peer_mid> -> {"id": <peer_IP>, "port": <peer_port>, "public_key": <b64_peer_public_key>, "services": <b64_peer_services_list>}`. `<b64_peer_services_list>` is a list which identifies the known services supported by the peer. The dictionary itself is returned within a dictionary: `{"peers": <peers_info_dictionary>}`.
+
+	
 The diagram below describes the **REST Requests** implemented in the **Android Application** (in this current implementation version). These requests are forwarded to, and handled by the **IPv8** object's **REST APIs**:
 
-![Alt Text](https://raw.githubusercontent.com/DanGraur/IPv8-documentation/master/resources/android_rest_api.png?token=APkaVcJZ2jcGbQ_qLaBdXqLRW1omOze_ks5a_hO6wA%3D%3D)
+![Alt Text](./android_rest_api.png)
 
+All requests must abide to the specifications detailed above (in this section). 
 
 ## Attestation Process: Detailed Explanation  
 
-Add the detailed explanation here, as described in the request-observations.md
+Below is a detailed description of the general flow for handling **incoming attestation requests**. It should be noted that this description is general, and does not necessarily refer to this particular implementation version (i.e. of the demo). Moreover, the reader shoould also note that **attestation** is requested from a particular peer (see documentation above for (**POST**): *attest* @ **AttestationEndpoint**), however, the actual HTTP request is forwarded to another, different peer. Hence, there shall be two cases for the **attestation request**:
+
+1. When a peer receives the HTTP request, packs it, and forwards it to the peer from which attestation is requested.
+
+2. When the peer from which attestation is requested receives the attestation request itself, as obtained from the 1st case.
+
+### Receiving the HTTP Attestation Request   
+
+**TODO: add text here**
+
+### Receiving the Attestation Request in the Attester Peer  
+
+**TODO: add text here**
+
+## Preliminary Notes
 
 ### Preliminary Notes (IPv8 classes)
 
