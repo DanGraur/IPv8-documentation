@@ -97,19 +97,59 @@ All requests must abide to the specifications detailed above (in this section).
 
 ## Attestation Process: Detailed Explanation  
 
-Below is a detailed description of the general flow for handling **incoming attestation requests**. It should be noted that this description is general, and does not necessarily refer to this particular implementation version (i.e. of the demo). Moreover, the reader shoould also note that **attestation** is requested from a particular peer (see documentation above for (**POST**): *attest* @ **AttestationEndpoint**), however, the actual HTTP request is forwarded to another, different peer. Hence, there shall be two cases for the **attestation request**:
+Below is a detailed description of the general flow for handling **incoming attestation requests**. It should be noted that this description is general, and does not necessarily refer to this particular implementation version (i.e. of the demo). Moreover, the reader shoould also note that **attestation** is requested from a particular peer (see documentation above for (**POST**): *attest* @ **AttestationEndpoint**), however, the actual HTTP request is forwarded to another peer, potentially different from the **attester** itself. Hence, there shall be two cases for the **attestation request**:
 
-1. When a peer receives the HTTP request, packs it, and forwards it to the peer from which attestation is requested.
+1. When a peer receives the HTTP request, packs it, and forwards it to the peer from which attestation is requested (i.e. the **attester** peer).
 
-2. When the peer from which attestation is requested receives the attestation request itself, as obtained from the 1st case.
+2. When the peer from which attestation is requested (i.e. the **attester** peer) receives the attestation request itself, as obtained from the 1st case.
+
+The two cases shall be further described in the sections to follow. To better understand what each of them do, however, we must introduce two callback methods of the `AttestationCommunity` class, located in the **community.py** module. The two callbacks are stored in the `self.attestation_request_callbacks` field, which is an array that should contain 2 elements, intuitively, each being a callback. The methods which set the callbacks are described in the following (both are located in the `AttestationCommunity` class):
+
+* `set_attestation_request_callback(f)`: this is the method which stores the function `f` in `self.attestation_request_callbacks[0]` field. `f` is the method actually handles the **attestation**. This method is called in `AttestationCommunity`'s `on_request_attestation` method when some peer requests the attestation from us (i.e. we are the **attester**). `f` must return a string if the attestation is made, this represents the attestation value. If `None` is returned, however, the attestation is not made. As input, `f` receives the following:
+	
+	* `<sender_peer>: Peer`: A `Peer` object representing the peer which forwarded this request to us.
+	
+	* `<attribute_name>: string`: A `string` object, representing the name of the attribute requiring attestation.
+	
+* `set_attestation_request_complete_callback(f)`: this is the method which stores the function `f` in `self.attestation_request_callbacks[1]` field. `f` is called back when an attestation has been completed.`f` needn't return anything. It should accept the following input parameters:
+	
+	* `<sender_peer>: Peer`: A `Peer` object representing the peer which forwarded this request to us.
+	
+	* `<attribute_name>: string`: A `string` object, representing the name of the attribute requiring attestation.
+	
+	* `<attestation_hash>: string`:  A `string` object, representing the hash of the attestation blob.
+	
+	* `<signer_peer> = None: string`: A `Peer` object representing the signer of the attestation (i.e. usually us).
+
+Below is a description of the two scenarios of the attestation process presented above. **Make sure to also read this section's last subsection. It contains details on how the attestation process works for this demo implementation**.
 
 ### Receiving the HTTP Attestation Request   
 
-**TODO: add text here**
+In the **community.py** module, and the `AttestationCommunity` class, the method `request_attestation` is called by the `render_POST` method in the `AttestationEndpoint` class, upon receiving a (**POST**: *request*) HTTP request. Attestation might be required from the peer receiving this request, or from another peer. Regardless, the `request_attestation` method will do the following:
+
+1. It will add the request to its own *request cache*.
+
+2. It will create some **metadata** from the request, that is: the *attribute's name* to be attested, and the request's *public key*.
+
+3. It will create 3 payloads: an **authentication payload** (communication security between this peer and the **attester**), the actual **attestation request payload** (created from the metadata), and the **time distribution payload** (created from the global time). The payloads are packed together in a packet which is forwarded to the attester.
+
+It should be noted that this method should normally be called once, when a raw (**POST**: *request*) HTTP request is received. This method will send a packet (with the contents as described above) directly to the **attester** peer, which might, in fact, be this peer, or another different peer.
 
 ### Receiving the Attestation Request in the Attester Peer  
 
-**TODO: add text here**
+In the **community.py** module and the `AttestationCommunity` class, the method `on_request_attestation` is called when attestation is requested from us. That is, when an attestation packet, as created by the `request_attestation` method in the `AttestationCommunity` is received. The `on_request_attestation` method will do the following:
+
+1. Unpack the packet, and get the 3 payloads: **attestation payload**, **request payload**, and **time distribution payload**. The source of the request is seen as the peer which last forwarded the request. 
+
+2. The attestation payload's metadata is retrieved and is used towards the attestation process. Attestation is performed by calling the `self.attestation_request_callbacks[0]` with the *source peer* and *attribute name* as parameters. If a value is returned, attestation has been performed, otherwise attestation has not been performed.  
+
+3. A blob is created from the attestation value. The blob is first used as a parameter in the `self.attestation_request_callbacks[1]`, together with the *source peer*, and the *attribute name*. After returning from the aforementioned call, the attestation blob is sent to the *source peer* (i.e. the peer from which we received this request). 
+
+### Side Note: Detailed Attestation Flow in the Demo
+
+This case is a bit curious, since the peer forwarding the (**POST**: *attest*) HTTP request (i.e. the peer running in the **main.py** script, in the method `make_attribute`), is indeed solving the **attestation request**, however, it is not actually holding it. In the demo, the peer holding the request is the well-known peer behind `localhost:8086/attestation` URL. The agent running in the **main.py** script is made aware of the request by having previously forwarded a (**GET**: *outstanding*) HTTP request to the well-known peer. It will serve the attestation request by forwarding a (**POST**: *attest*) request back to the `localhost:8086/attestation` (well-known) peer. 
+
+As previously mentioned, the well-known peer behind `localhost:8086/attestation` is actually holding the **attestation requests**. For each request forwarded to this peer, a `Deferred` object is created, which is attached to a `yield`. This is done in the `on_request_attestation` method (of the `AttestationEndpoint` class), which is called as `self.attestation_request_callbacks[0]` in `on_request_attestation` method (of the `AttestationCommunity` class). The `yield` will suspend the thread, which will now wait for the `Deferred` object to yield something. For this object to yield something, someone has to call the `Deferred.callback(<value>)` method on it. This is done when the agent behind **main.py** forwards a (**POST**: *attest*) HTTP request to the well-known peer. In the `render_POST` method of `AttestationEndpoint` class, for this `type` of request, the deferred object is retrieved, and called back with an attestation value (obtained from the (**POST**: *attest*) request) as the `<value>` parameter. This allows the `Deferred` object to yield this value, and, in turn, allows the `on_request_attestation` (of `AttestationCommunity`) method to continue executing, which was halted by its call to `self.attestation_request_callbacks[0]`, i.e. `on_request_attestation` (of `AttestationEndpoint`). The `on_request_attestation` (of `AttestationCommunity`) eventually calls `self.attestation_request_callbacks[1]`, i.e. `on_attestation_complete`, and finally sends back the attestation to the source peer).
 
 ## Preliminary Notes
 
