@@ -31,7 +31,7 @@ Example RESTful based communication flow for serving **Attestation Requests**, a
 
 3. A **Fellow Peer** will await for at least one other fellow peer (the **Client**) to be present in the network, before accepting and solving attestation requests. It will do so by repeatedly forwarding (**GET**: *peers*) requests to the well-known peer, until this returns a non-empty list of peers.
 
-4. The **Fellow Peer** will probe for **outstanding** (i.e. as of yet unresolved) **attestation requests**. To obtain such a list, it forwards a (**GET**: *outstanding*) request to the well-known peer. The request will return a list of tuples of the form `(<b64_encoded_requesting_peer_ID>, <attribte_name>)`, each representing an **outstanding request**. 
+4. The **Fellow Peer** will probe for **outstanding** (i.e. as of yet unresolved) **attestation requests**. To obtain such a list, it forwards a (**GET**: *outstanding*) request to the well-known peer. The request will return a list of tuples of the form `(<b64_encoded_requesting_peer_ID>, <attribute_name>)`, each representing an **outstanding request**. 
 
 5. The **Fellow Peer** chooses to solve the request, and **attest** the requested **attribute**. This process is done locally, in the peer itself. The result of the attestation is encoded in *Base64* format, and packed in a (**POST**: *attest*) request, which is forwarded to the well-known peer (the **Attestation Server**). 
 
