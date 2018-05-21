@@ -77,11 +77,11 @@ Below, a detailed explanation of the REST Requests is presented:
 		
 		* `attribute_value = <b64_attribute_value>`: Base64 encoded attested value for the attribute.
 	
-	* **`type = "verify"`**: Request the verification of a particular set of values associated to a particular attribute, from another particular peer. ** *Required additional parameters* **:
+	* **`type = "verify"`**: Request the verification of a particular attestation and set of values associated to a particular attribute, from another particular peer. ** *Required additional parameters* **:
 		
 		* `mid = <b64_peer_mid>`: Identifies the peer (by its unique ID) from which the attestation is requested.
 		
-		* `attribute_hash = <b64_attribute_hash>`: A Base64 encoded hash of the attribute.
+		* `attribute_hash = <b64_attribute_hash>`: A Base64 encoded hash of the attribute's particular attestation, subject to verification.
 		
 		* `attribute_values = <b64_attribute_values_string>`: A variable length list of Base64 encoded attribute values, for which verification is required. `<b64_attribute_values_string>` is a comma separated string of values, that is: `<b64_attribute_values_string> = "<b64_attr_val_1>,<b64_attr_val_2>,...,<b64_attr_val_N>"`, where `N` may be arbitrarily large.    
 	
